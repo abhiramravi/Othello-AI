@@ -75,7 +75,6 @@ namespace Desdemona
          * @param y Y coordinate
          */
         void makeMove( Turn turn, int x, int y );
-
         /**
          * Applies a move on the board
          * @param turn Color of piece to be played

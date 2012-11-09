@@ -120,15 +120,16 @@ bool OthelloBoard::validateMove( Turn turn, Move move ) const
     return validateMove( turn, move.x, move.y );
 }
 
-
 void OthelloBoard::makeMove( Turn turn, int x, int y )
 {
+    //cout<<"MoveType x: "<<x<<" y: "<<y<<"Turn : "<<turn<<endl;
     if ( !validateMove( turn, x, y ) )
     {
         throw InvalidMoveException( Move( x, y ) );
     }
 
     // Initial count is 1 for the new piece added
+    //cout<<"Inside Make Move"<<endl;
     int flippedCoins = 1;
     board[ x ][ y ] = turn;
     // Scan in all directions to see if there is a sequence of pieces of
