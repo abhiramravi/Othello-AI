@@ -6,7 +6,7 @@
 ROOTDIR  = ../../
 include $(ROOTDIR)Makefile.inc
 
-BOT	= AlkorBot
+BOT	= AlkorBotv2
 OUT = bot.so
 
 OBJS = $(BOT).o

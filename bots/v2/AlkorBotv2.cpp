@@ -185,7 +185,6 @@ Move MyBot::play( const OthelloBoard& board )
     ourTurn = turn;
     if(!strtGame){
         getPrevMove(board);
-        cout<<"Move by opponent : x = "<<PrevMove.x<<" y = "<<PrevMove.y<<endl;
     }
     else if(ourTurn == BLACK){
         strtGame = false;
