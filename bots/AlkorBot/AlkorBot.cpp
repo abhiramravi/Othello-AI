@@ -35,15 +35,15 @@ using namespace Desdemona;
 /*Simulate for different values and choose the best*/
 #define STABILITY_WEIGHT 10
 
-#define PIECE_WEIGHT 10
-#define CORNER_WEIGHT 800
-#define CORNER_CLOSE_WEIGHT 380
-#define DISC_WEIGHT 10
+#define PIECE_WEIGHT 1
+#define CORNER_WEIGHT 80
+#define CORNER_CLOSE_WEIGHT 38
+#define DISC_WEIGHT 1
 #define MOBILIITY_WEIGHT 7.8
 #define FRONTIER_WEIGHT 7.4
 
-#define MAX_NUM INT_MAX
-#define MIN_NUM INT_MIN
+#define MAX_NUM LONG_MAX
+#define MIN_NUM LONG_MIN
 
 /*Global Variables*/
 Move FinalMove(-1, -1);
@@ -92,7 +92,7 @@ double evaluationFunc(Node* curNode) {
 	Turn myTurn = curNode->nodeType;
 	Turn otherTurn = other(myTurn);
 
-	int finalVal = 0;
+	double finalVal = 0.0;
 
 	/*Coin position weight*/
 	int discEvalVal = 0;
@@ -107,32 +107,24 @@ double evaluationFunc(Node* curNode) {
 		}
 	}
 
-	//finalVal += DISC_WEIGHT*discEvalVal;
-	finalVal = discEvalVal;
-	/*Add weights to the mobility count*/
+	finalVal += DISC_WEIGHT*discEvalVal;
+	/*Add weights to the mobility count*
 	int a = (curNode->nodeBoard).getValidMoves(myTurn).size();
 	int b = (curNode->nodeBoard).getValidMoves(otherTurn).size();
-
-	//finalVal += a-b;
-	/*
 	double tmp;
 	if(a != b){
 		tmp = 100 * ( a /(1.0 * (a+b)) );
 		finalVal += MOBILIITY_WEIGHT *  ( a < b ? -1*(100-tmp) : tmp );
-	}*/
-	/*Add weights to the Piecewise count of Coins*/
+	}
+	/*Add weights to the Piecewise count of Coins*
 	a = (curNode->nodeBoard).getRedCount();
 	b = (curNode->nodeBoard).getBlackCount();
-
-	//finalVal += (myTurn == RED ?  a-b : b-a);
-
-	/*
 	if(a != b){
 		tmp = 100 * ( myTurn == RED ? ( a / ( 1.0 * (a+b)) ) : ( b / ( 1.0 * (a+b)) ) );
 		finalVal += PIECE_WEIGHT *  ( a < b ? -1*(100-tmp) : tmp);
 	}
-	*/
-	/*Corner occupancy check
+
+	/*Corner occupancy check*
 	tmp += (curNode->nodeBoard).get(0,0) == myTurn ? 25.0 : -1*25.0;
 	tmp += (curNode->nodeBoard).get(7,0) == myTurn ? 25.0 : -1*25.0;
 	tmp += (curNode->nodeBoard).get(0,7) == myTurn ? 25.0 : -1*25.0;
@@ -140,7 +132,7 @@ double evaluationFunc(Node* curNode) {
 
 	finalVal += CORNER_WEIGHT*tmp;
 
-	/*Corner Closeness occupancy
+	/*Corner Closeness occupancy*
 	tmp += (curNode->nodeBoard).get(0,1) == myTurn ? -1*12.5 : 12.5;
 	tmp += (curNode->nodeBoard).get(1,0) == myTurn ? -1*12.5 : 12.5;
 	tmp += (curNode->nodeBoard).get(7,1) == myTurn ? -1*12.5 : 12.5;
@@ -151,8 +143,9 @@ double evaluationFunc(Node* curNode) {
 	tmp += (curNode->nodeBoard).get(0,6) == myTurn ? -1*12.5 : 12.5;
 
 	finalVal += CORNER_CLOSE_WEIGHT*tmp;
-	*/
+*/
 	/*Add weights to frontier cells*/
+
 	return finalVal;
 }
 
@@ -161,19 +154,22 @@ double evaluationFunc(Node* curNode) {
  * Pruning is done while constructing with the help of Evaluation function
  * List of all the children of a current Node can be obtained from the .getValidMoves method of OthelloBoard object
  */
-int alphabetaMiniMax(Node* root, int depth, int alpha, int beta) {
+double alphabetaMiniMax(Node* root, int depth, double alpha, double beta) {
 	if (depth == PLY_DEPTH) {
-		return evaluationFunc(root);
+		double val = evaluationFunc(root);
+		//cout<<val<<endl;
+		return val;
 	}
 
 	list<Move> successors = (root->nodeBoard).getValidMoves(root->nodeType);
 	/*Mobility Rule for inner nodes*/
 	if (successors.empty()) {
 		return evaluationFunc(root);
+		//return (ourTurn == root->nodeType ? MIN_NUM : MAX_NUM);
 	}
 
 	Node* tmp = NULL;
-	int newValue = 0;
+	double newValue = 0.0;
 
 	for (list<Move>::iterator it = successors.begin(); it != successors.end();
 			++it) {
@@ -198,7 +194,8 @@ void getPrevMove(const OthelloBoard& board) {
 	int i, j;
 	for (i = 0; i < 8; ++i) {
 		for (j = 0; j < 8; ++j) {
-			if (PrevBoard.get(i, j) == EMPTY && board.get(i, j) != PrevBoard.get(i, j)) {
+			if (PrevBoard.get(i, j) == EMPTY
+					&& board.get(i, j) != PrevBoard.get(i, j)) {
 				PrevMove.x = i, PrevMove.y = j;
 				return;
 			}
@@ -238,7 +235,8 @@ Move MyBot::play(const OthelloBoard& board) {
 		list<Move> moveLst = PrevBoard.getValidMoves(ourTurn);
 		list<Move>::iterator it = moveLst.begin();
 		int randNo = (rand() % 4);
-		for (int i = 0; i < randNo - 1; ++it, ++i);
+		for (int i = 0; i < randNo - 1; ++it, ++i)
+			;
 
 		FinalMove.x = it->x, FinalMove.y = it->y;
 		PrevBoard.makeMove(ourTurn, FinalMove);

@@ -89,7 +89,7 @@ bool isDiagonalsFilled(int i, int j, OthelloBoard& curBoard )
 	{
 		if(curBoard.get(k,l) == EMPTY) return false;
 		k++;
-		l++:
+		l++;
 	}
 	k = i;
 	l = j;
@@ -97,7 +97,7 @@ bool isDiagonalsFilled(int i, int j, OthelloBoard& curBoard )
 	{
 		if(curBoard.get(k,l) == EMPTY) return false;
 		k++;
-		l--:
+		l--;
 	}
 	k = i;
 	l = j;
@@ -105,7 +105,7 @@ bool isDiagonalsFilled(int i, int j, OthelloBoard& curBoard )
 	{
 		if(curBoard.get(k,l) == EMPTY) return false;
 		k--;
-		l++:
+		l++;
 	}
 	k = i;
 	l = j;
@@ -113,7 +113,7 @@ bool isDiagonalsFilled(int i, int j, OthelloBoard& curBoard )
 	{
 		if(curBoard.get(k,l) == EMPTY) return false;
 		k--;
-		l--:
+		l--;
 	}
 	return true;
 }
