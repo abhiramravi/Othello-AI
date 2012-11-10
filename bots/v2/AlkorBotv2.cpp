@@ -35,8 +35,6 @@ using namespace Desdemona;
  * Simulate for different values and choose the best one
  */
 #define PLY_DEPTH 5
-#define STABILITY_WEIGHT 10
-#define MOBILIITY_WEIGHT 15
 #define MAX_NUM 600
 #define MIN_NUM -600
 
