@@ -89,7 +89,7 @@ bool isDiagonalsFilled(int i, int j, OthelloBoard& curBoard )
 	{
 		if(curBoard.get(k,l) == EMPTY) return false;
 		k++;
-		l++:
+		l++;
 	}
 	k = i;
 	l = j;
@@ -97,7 +97,7 @@ bool isDiagonalsFilled(int i, int j, OthelloBoard& curBoard )
 	{
 		if(curBoard.get(k,l) == EMPTY) return false;
 		k++;
-		l--:
+		l--;
 	}
 	k = i;
 	l = j;
@@ -105,7 +105,7 @@ bool isDiagonalsFilled(int i, int j, OthelloBoard& curBoard )
 	{
 		if(curBoard.get(k,l) == EMPTY) return false;
 		k--;
-		l++:
+		l++;
 	}
 	k = i;
 	l = j;
@@ -113,7 +113,7 @@ bool isDiagonalsFilled(int i, int j, OthelloBoard& curBoard )
 	{
 		if(curBoard.get(k,l) == EMPTY) return false;
 		k--;
-		l--:
+		l--;
 	}
 	return true;
 }
@@ -158,14 +158,14 @@ int stabilityFactor(Node* curNode)
 	{
 		for(int j = 0; j < 8; j ++)
 		{
-			if(filledRows[i] && filledCols[j] && isDiagonalsFilled(i,j,curBoard))
+			if(filledRows[i] && filledCols[j] && isDiagonalsFilled(i,j,curBoard) && myTurn == curBoard.get(i, j))
 				stability++;
 		}
 	}
-	if( filledRows[0] ) stability += 8;
-	if( filledRows[7] ) stability += 8;
-	if( filledCols[0] ) stability += 8;
-	if( filledCols[7] ) stability += 8;
+	if( filledRows[0] && myTurn == curBoard.get(0, 0)) stability += 8;
+	if( filledRows[7] && myTurn == curBoard.get(7, 0)) stability += 8;
+	if( filledCols[0] && myTurn == curBoard.get(0, 7)) stability += 8;
+	if( filledCols[7] && myTurn == curBoard.get(7, 7)) stability += 8;
 
 	return stability;
 }
