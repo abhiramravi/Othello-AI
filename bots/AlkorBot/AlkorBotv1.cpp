@@ -1,11 +1,11 @@
 /*
- * @file botTemplate.cpp
- * @author Arun Tejasvi Chaganty <arunchaganty@gmail.com>
- * @date 2010-02-04
- * @modified-by Sabarinath, Abhiram
- * @modified-date 2012-11-05
- * Template for users to create their own bots
- */
+* @file botTemplate.cpp
+* @author Arun Tejasvi Chaganty <arunchaganty@gmail.com>
+* @date 2010-02-04
+* @modified-by Sabarinath, Abhiram
+* @modified-date 2012-11-05
+* Template for users to create their own bots
+*/
 
 #include "Othello.h"
 #include "OthelloBoard.h"
@@ -34,45 +34,49 @@ using namespace Desdemona;
 /*
  * Simulate for different values and choose the best one
  */
-#define PLY_DEPTH 5
-#define MAX_NUM 600
-#define MIN_NUM -600
+#define PLY_DEPTH 6
+#define MAX_NUM -600
+#define MIN_NUM 600
 
-Move FinalMove(-1,-1);
+typedef pair< int, list<Move>* > pil;
+static list<Move>* prevBest;
+
 Turn ourTurn;
-static OthelloBoard PrevBoard;
-static bool strtGame = true;
-Move PrevMove(-1,-1);
 
 int score[10][10] = {
-    {0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
-    {0, 65, -3,  6,  4,  4,  6, -3, 65,  0},
-    {0, -3, -29, 3,  1,  1,  3, -29,-3,  0},
-    {0,  6,  3,  5,  3,  3,  5,  3,  6,  0},
-    {0,  4,  1,  3,  1,  1,  3,  1,  4,  0},
-    {0,  4,  1,  3,  1,  1,  3,  1,  4,  0},
-    {0,  6,  3,  5,  3,  3,  5,  3,  6,  0},
-    {0, -3, -29, 3,  1,  1,  3, -29,-3,  0},
-    {0, 65, -3,  6,  4,  4,  6, -3, 65,  0},
-    {0,  0,  0,  0,  0,  0,  0,  0,  0,  0}
-};
+            {0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
+            {0, 65, -3,  6,  4,  4,  6, -3, 65,  0},
+            {0, -3, -29, 3,  1,  1,  3, -29,-3,  0},
+            {0,  6,  3,  5,  3,  3,  5,  3,  6,  0},
+            {0,  4,  1,  3,  1,  1,  3,  1,  4,  0},
+            {0,  4,  1,  3,  1,  1,  3,  1,  4,  0},
+            {0,  6,  3,  5,  3,  3,  5,  3,  6,  0},
+            {0, -3, -29, 3,  1,  1,  3, -29,-3,  0},
+            {0, 65, -3,  6,  4,  4,  6, -3, 65,  0},
+            {0,  0,  0,  0,  0,  0,  0,  0,  0,  0}
+    };
 
 /**
  *  Each Node of the MinMax Tree is represented by the 'Node' Class
  */
 class Node{
     public:
-        OthelloBoard nodeBoard; 
+		OthelloBoard nodeBoard; 
+
+        int evalValue;
+        Node* parent;
         Turn nodeType;
 
-        Node(OthelloBoard board, Turn type);
+		Node(OthelloBoard board, Node* parent, Turn type);
         void ModifyBoard(Move moveMade);
-        ~Node();
+		~Node();
 };
 
-Node::Node(OthelloBoard board, Turn type){
+Node::Node(OthelloBoard board, Node* parent, Turn type){
     this->nodeBoard = board;
-    this->nodeType = type;
+	this->evalValue = -1;
+    this->parent = parent;
+	this->nodeType = type;
 }
 
 void Node::ModifyBoard(Move moveMade){
@@ -80,18 +84,19 @@ void Node::ModifyBoard(Move moveMade){
 }
 
 int evaluationFunc(Node* curNode){
-    //TODO: Return a value for the given Node based on different strategies.
+	//TODO: Return a value for the given Node based on different strategies.
     OthelloBoard& curBoard = curNode->nodeBoard;
     Turn myTurn = curNode->nodeType;
     Turn otherTurn = other(myTurn);
-
+    //cout<<myTurn<<endl;
+    
     int count = 0;
     int i, j;
 
     for( i = 0; i < 8; ++i){
         for(j = 0; j < 8; ++j){
             if( curBoard.get(i, j) == myTurn)
-                count +=  score[i+1][j+1];
+               count +=  score[i+1][j+1];
             else if(curBoard.get(i, j) == otherTurn)
                 count -= score[i+1][j+1];
         }
@@ -108,53 +113,57 @@ bool deepEnough(Node* root, int depth){
     return depth == PLY_DEPTH;
 }
 
+list<Move>* getCopy(list<Move>* lst){
+    list<Move>* to_ret = new list<Move>;
+    list<Move>::iterator it;
+    for( it = lst->begin(); it != lst->end(); ++it){
+        to_ret->PB(*it);
+    }
+    return to_ret;
+}
+
 /**
  * Recursive procedure implementing MinMax Tree Construction, with alpha - beta pruning
  * Pruning is done while constructing with the help of Evaluation function
  * List of all the children of a current Node can be obtained from the .getValidMoves method of OthelloBoard object
  */
-int alphabetaMiniMax(Node* root, int depth, int alpha, int beta){
+pil alphabetaMiniMax(Node* root, int depth, int alpha, int beta){
     if( deepEnough(root, depth)){
-        return evaluationFunc(root);
+        return MP(evaluationFunc(root), new list<Move> );
     }
 
+//    printf("Level %d alpha : %d beta %d\n", depth, alpha, beta);
+     
     list<Move> successors = (root->nodeBoard).getValidMoves(root->nodeType);
     if( successors.empty() ){
-        return evaluationFunc(root);
+        return MP(evaluationFunc(root), new list<Move>);
     }
-
+    
     list<Move>::iterator it;
+    pil resultSucc;
     Node* tmp = NULL;
     int newValue = 0;
-
+    list<Move>* bestPath = new list<Move>;
     for(it = successors.begin(); it != successors.end(); ++it){
-        tmp = new Node(root->nodeBoard, other(root->nodeType)); 
+  //      cout <<"Move is x = "<<it->x<<" y = "<<it->y<<endl;
+        tmp = new Node(root->nodeBoard, root, other(root->nodeType)); 
         tmp->ModifyBoard(*it);
-        newValue = -1*alphabetaMiniMax(tmp, depth+1, -1*beta, -1*alpha);
-        if( newValue > alpha){
-            alpha = newValue;
-            if(depth == 0){
-                FinalMove.x = it->x;
-                FinalMove.y = it->y;
-            }
+    //    cout<<"Modified"<<endl;
+        resultSucc = alphabetaMiniMax(tmp, depth+1, -1*beta, -1*alpha);
+    //    cout<<"Depth : "<<depth<<" value: "<<resultSucc.ff<<endl;
+        
+        newValue = -1*resultSucc.ff;
+        if( newValue > beta ){
+            beta = newValue;
+            bestPath = getCopy(resultSucc.ss);
+            bestPath->PF(*it);
         }
-        if( alpha >= beta){
-            return alpha;
-        }
-    }
-    return alpha;
-}
-
-void getPrevMove(const OthelloBoard& board){
-    int i, j;
-    for( i = 0; i < 8; ++i){
-        for( j = 0; j < 8; ++j){
-            if(PrevBoard.get(i,j) == EMPTY && board.get(i,j) != PrevBoard.get(i,j)){
-                PrevMove.x = i, PrevMove.y = j;
-                return;
-            }
+        if( beta >= alpha){
+            return MP(beta, bestPath);
         }
     }
+    
+    return MP(beta, bestPath);
 }
 
 class MyBot: public OthelloPlayer
@@ -176,22 +185,21 @@ class MyBot: public OthelloPlayer
 
 MyBot::MyBot( Turn turn ) : OthelloPlayer( turn )
 {
-
+    
 }
 
 Move MyBot::play( const OthelloBoard& board )
 {
-    ourTurn = turn;
-    if(!strtGame){
-        getPrevMove(board);
-        cout<<"Move by opponent : x = "<<PrevMove.x<<" y = "<<PrevMove.y<<endl;
-    }
-    strtGame = false;
-    PrevBoard = OthelloBoard(board);
-    Node* root = new Node( PrevBoard, ourTurn);
-    alphabetaMiniMax( root, 0, MIN_NUM, MAX_NUM);
-    PrevBoard.makeMove(ourTurn, FinalMove);
-    return FinalMove; 
+	ourTurn = turn;
+//    cout<<"Whose turn: "<<ourTurn<<endl;
+	Node* root = new Node( OthelloBoard(board), NULL, ourTurn);
+    pil tmp = alphabetaMiniMax( root, 0, MIN_NUM, MAX_NUM);
+//    cout<<"Size of list : "<<(tmp.ss)->size()<<endl;
+//    cout<<"Start turn: "<<strtTurn<<endl;
+    Move to_ret = (tmp.ss)->front();
+    (tmp.ss)->pop_front();
+    prevBest = getCopy(tmp.ss);
+    return to_ret;
 }
 
 // The following lines are _very_ important to create a bot module for Desdemona

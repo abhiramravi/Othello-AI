@@ -17,7 +17,7 @@ using namespace std;
 using namespace Desdemona;
 
 // TODO: Make this defined in a config file somewhere
-#define BOT_TIMEOUT 2
+#define BOT_TIMEOUT 2 
 
 enum ExceptionFlags
 {
