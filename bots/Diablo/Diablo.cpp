@@ -34,14 +34,16 @@ using namespace Desdemona;
 /*
  * Simulate for different values and choose the best one
  */
-#define PLY_DEPTH 6
-#define MAX_NUM -600
-#define MIN_NUM 600
+#define PLY_DEPTH 5
+#define MAX_NUM 600
+#define MIN_NUM -600
 
-typedef pair<int, list<Move>*> pil;
-
+Move FinalMove(-1, -1);
 Turn ourTurn;
-static Turn strtTurn = EMPTY;
+static OthelloBoard PrevBoard;
+static bool strtGame = true;
+Move PrevMove(-1, -1);
+
 int score[10][10] =
 {
 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
@@ -62,21 +64,16 @@ class Node
 {
 public:
 	OthelloBoard nodeBoard;
-
-	int evalValue;
-	Node* parent;
 	Turn nodeType;
 
-	Node(OthelloBoard board, Node* parent, Turn type);
+	Node(OthelloBoard board, Turn type);
 	void ModifyBoard(Move moveMade);
 	~Node();
 };
 
-Node::Node(OthelloBoard board, Node* parent, Turn type)
+Node::Node(OthelloBoard board, Turn type)
 {
 	this->nodeBoard = board;
-	this->evalValue = -1;
-	this->parent = parent;
 	this->nodeType = type;
 }
 
@@ -84,34 +81,123 @@ void Node::ModifyBoard(Move moveMade)
 {
 	(this->nodeBoard).makeMove(other(this->nodeType), moveMade);
 }
+bool isDiagonalsFilled(int i, int j, OthelloBoard& curBoard )
+{
+	int k = i;
+	int l = j;
+	while(0 <= k && k < 8 && 0 <= l && l < 8)
+	{
+		if(curBoard.get(k,l) == EMPTY) return false;
+		k++;
+		l++:
+	}
+	k = i;
+	l = j;
+	while(0 <= k && k < 8 && 0 <= l && l < 8)
+	{
+		if(curBoard.get(k,l) == EMPTY) return false;
+		k++;
+		l--:
+	}
+	k = i;
+	l = j;
+	while(0 <= k && k < 8 && 0 <= l && l < 8)
+	{
+		if(curBoard.get(k,l) == EMPTY) return false;
+		k--;
+		l++:
+	}
+	k = i;
+	l = j;
+	while(0 <= k && k < 8 && 0 <= l && l < 8)
+	{
+		if(curBoard.get(k,l) == EMPTY) return false;
+		k--;
+		l--:
+	}
+	return true;
+}
 
-int evaluationFunc(Node* curNode)
+/* Currently implementing stability as a separate function. Later integrate into evaluation to save time */
+int stabilityFactor(Node* curNode)
 {
 	OthelloBoard& curBoard = curNode->nodeBoard;
 	Turn myTurn = curNode->nodeType;
 	Turn otherTurn = other(myTurn);
 
-	int positionStrength = 0;
+	bool filledRows[8];
+	bool filledCols[8];
+
+	bool check ;
+	for (int i = 0; i < 8; i++)
+	{
+		check = true;
+		for (int j = 0; j < 8; j++)
+		{
+			if (curBoard.get(i, j) == EMPTY)
+				check = false;
+		}
+		if (check)
+			filledRows[i] = true;
+		//cout << "Filled row " << i << endl;
+	}
+	for (int j = 0; j < 8; j++)
+	{
+		check = true;
+		for (int i = 0; i < 8; i++)
+		{
+			if (curBoard.get(i, j) == EMPTY)
+				check = false;
+		}
+		if (check)
+			filledCols[j] = true;
+		//cout << "Filled col " << j << endl;
+	}
+	int stability = 0;
+	for( int i = 0; i < 8; i ++)
+	{
+		for(int j = 0; j < 8; j ++)
+		{
+			if(filledRows[i] && filledCols[j] && isDiagonalsFilled(i,j,curBoard))
+				stability++;
+		}
+	}
+	if( filledRows[0] ) stability += 8;
+	if( filledRows[7] ) stability += 8;
+	if( filledCols[0] ) stability += 8;
+	if( filledCols[7] ) stability += 8;
+
+	return stability;
+}
+int evaluationFunc(Node* curNode)
+{
+	//TODO: Return a value for the given Node based on different strategies.
+	OthelloBoard& curBoard = curNode->nodeBoard;
+	Turn myTurn = curNode->nodeType;
+	Turn otherTurn = other(myTurn);
+
+	int evalValue = 0;
 	int i, j;
-	/* This part takes care of the positional strength (based on the coefficient encoded) */
+	/* This part takes care of the positional advantage */
 	for (i = 0; i < 8; ++i)
 	{
 		for (j = 0; j < 8; ++j)
 		{
 			if (curBoard.get(i, j) == myTurn)
-				positionStrength += score[i + 1][j + 1];
+				evalValue += score[i + 1][j + 1];
 			else if (curBoard.get(i, j) == otherTurn)
-				positionStrength -= score[i + 1][j + 1];
+				evalValue -= score[i + 1][j + 1];
 		}
 	}
-	/* This part takes care of the mobility factor. */
-	positionStrength += curBoard.getValidMoves(myTurn).size()
+	/* This part takes care of the relative mobility with respect to the opponent. */
+	evalValue += curBoard.getValidMoves(myTurn).size()
 			- curBoard.getValidMoves(otherTurn).size();
 
-	/* This part takes care of material advantage */
+	/* This part takes care of the material advantage */
 	int tmp = curBoard.getRedCount() - curBoard.getBlackCount();
-	positionStrength += (myTurn == RED ? tmp : -1 * tmp);
-	return positionStrength;
+	evalValue += (myTurn == RED ? tmp : -1 * tmp);
+	stabilityFactor(curNode);
+	return evalValue;
 }
 
 bool deepEnough(Node* root, int depth)
@@ -120,65 +206,67 @@ bool deepEnough(Node* root, int depth)
 	return depth == PLY_DEPTH;
 }
 
-list<Move>* getCopy(list<Move>* lst)
-{
-	list<Move>* to_ret = new list<Move>;
-	list<Move>::iterator it;
-	for (it = lst->begin(); it != lst->end(); ++it)
-	{
-		to_ret->PB(*it);
-	}
-	return to_ret;
-}
-
 /**
  * Recursive procedure implementing MinMax Tree Construction, with alpha - beta pruning
  * Pruning is done while constructing with the help of Evaluation function
  * List of all the children of a current Node can be obtained from the .getValidMoves method of OthelloBoard object
  */
-pil alphabetaMiniMax(Node* root, int depth, int alpha, int beta)
+int alphabetaMiniMax(Node* root, int depth, int alpha, int beta)
 {
 	if (deepEnough(root, depth))
 	{
-		return MP(evaluationFunc(root), new list<Move>);
+		return evaluationFunc(root);
 	}
-
-//    printf("Level %d alpha : %d beta %d\n", depth, alpha, beta);
 
 	list<Move> successors = (root->nodeBoard).getValidMoves(root->nodeType);
 	if (successors.empty())
 	{
-		return MP(evaluationFunc(root), new list<Move>);
+		int tmp = (root->nodeBoard).getRedCount()
+				- (root->nodeBoard).getBlackCount();
+		return (root->nodeType == RED ? tmp : -1 * tmp);
 	}
 
 	list<Move>::iterator it;
-	pil resultSucc;
 	Node* tmp = NULL;
 	int newValue = 0;
-	list<Move>* bestPath = new list<Move>;
+
 	for (it = successors.begin(); it != successors.end(); ++it)
 	{
-		//      cout <<"Move is x = "<<it->x<<" y = "<<it->y<<endl;
-		tmp = new Node(root->nodeBoard, root, other(root->nodeType));
+		tmp = new Node(root->nodeBoard, other(root->nodeType));
 		tmp->ModifyBoard(*it);
-		//    cout<<"Modified"<<endl;
-		resultSucc = alphabetaMiniMax(tmp, depth + 1, -1 * beta, -1 * alpha);
-		//    cout<<"Depth : "<<depth<<" value: "<<resultSucc.ff<<endl;
-
-		newValue = -1 * resultSucc.ff;
-		if (newValue > beta)
+		newValue = -1 * alphabetaMiniMax(tmp, depth + 1, -1 * beta, -1 * alpha);
+		if (newValue > alpha)
 		{
-			beta = newValue;
-			bestPath = getCopy(resultSucc.ss);
-			bestPath->PF(*it);
+			alpha = newValue;
+			if (depth == 0)
+			{
+				FinalMove.x = it->x;
+				FinalMove.y = it->y;
+			}
 		}
-		if (beta >= alpha)
+		if (alpha >= beta)
 		{
-			return MP(beta, bestPath);
+			return alpha;
 		}
 	}
+	return alpha;
+}
 
-	return MP(beta, bestPath);
+void getPrevMove(const OthelloBoard& board)
+{
+	int i, j;
+	for (i = 0; i < 8; ++i)
+	{
+		for (j = 0; j < 8; ++j)
+		{
+			if (PrevBoard.get(i, j) == EMPTY
+					&& board.get(i, j) != PrevBoard.get(i, j))
+			{
+				PrevMove.x = i, PrevMove.y = j;
+				return;
+			}
+		}
+	}
 }
 
 class MyBot: public OthelloPlayer
@@ -207,16 +295,30 @@ MyBot::MyBot(Turn turn) :
 Move MyBot::play(const OthelloBoard& board)
 {
 	ourTurn = turn;
-	if (strtTurn == EMPTY)
+	if (!strtGame)
 	{
-		strtTurn = ourTurn;
+		getPrevMove(board);
+		cout << "Move by opponent : x = " << PrevMove.x << " y = " << PrevMove.y
+				<< endl;
+	} else if (ourTurn == BLACK)
+	{
+		strtGame = false;
+		PrevBoard = OthelloBoard(board);
+		list<Move> moveLst = PrevBoard.getValidMoves(ourTurn);
+		list<Move>::iterator it = moveLst.begin();
+		int randNo = (rand() % 4);
+		for (int i = 0; i < randNo - 1; it++, i++)
+			;
+		FinalMove.x = it->x, FinalMove.y = it->y;
+		PrevBoard.makeMove(ourTurn, FinalMove);
+		return FinalMove;
 	}
-//    cout<<"Whose turn: "<<ourTurn<<endl;
-	Node* root = new Node(OthelloBoard(board), NULL, ourTurn);
-	pil tmp = alphabetaMiniMax(root, 0, MIN_NUM, MAX_NUM);
-//    cout<<"Size of list : "<<(tmp.ss)->size()<<endl;
-//    cout<<"Start turn: "<<strtTurn<<endl;
-	return (tmp.ss)->front();
+	strtGame = false;
+	PrevBoard = OthelloBoard(board);
+	Node* root = new Node(PrevBoard, ourTurn);
+	alphabetaMiniMax(root, 0, MIN_NUM, MAX_NUM);
+	PrevBoard.makeMove(ourTurn, FinalMove);
+	return FinalMove;
 }
 
 // The following lines are _very_ important to create a bot module for Desdemona
