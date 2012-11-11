@@ -194,14 +194,14 @@ int stabilityFactor(Node* curNode)
 				stability--;
 		}
 	}
-	if( filledRows[0] && myTurn == curBoard.get(0, 0) && curBoard.get(0, 0) == myTurn) stability += 8;
-	if( filledRows[7] && myTurn == curBoard.get(7, 0) && curBoard.get(0, 0) == myTurn) stability += 8;
-	if( filledCols[0] && myTurn == curBoard.get(0, 7) && curBoard.get(0, 0) == myTurn) stability += 8;
-	if( filledCols[7] && myTurn == curBoard.get(7, 7) && curBoard.get(0, 0) == myTurn) stability += 8;
-	if( filledRows[0] && myTurn == curBoard.get(0, 0) && curBoard.get(0, 0) == otherTurn) stability -= 8;
-	if( filledRows[7] && myTurn == curBoard.get(7, 0) && curBoard.get(0, 0) == otherTurn) stability -= 8;
-	if( filledCols[0] && myTurn == curBoard.get(0, 7) && curBoard.get(0, 0) == otherTurn) stability -= 8;
-	if( filledCols[7] && myTurn == curBoard.get(7, 7) && curBoard.get(0, 0) == otherTurn) stability -= 8;
+	if( filledRows[0] && myTurn == curBoard.get(0, 0)) stability += 8;
+	if( filledRows[7] && myTurn == curBoard.get(7, 0)) stability += 8;
+	if( filledCols[0] && myTurn == curBoard.get(0, 7)) stability += 8;
+	if( filledCols[7] && myTurn == curBoard.get(7, 7)) stability += 8;
+	if( filledRows[0] && otherTurn == curBoard.get(0, 0)) stability -= 8;
+	if( filledRows[7] && otherTurn == curBoard.get(7, 0)) stability -= 8;
+	if( filledCols[0] && otherTurn == curBoard.get(0, 7)) stability -= 8;
+	if( filledCols[7] && otherTurn == curBoard.get(7, 7)) stability -= 8;
 
 	return stability;
 }
