@@ -369,7 +369,7 @@ Move MyBot::play(const OthelloBoard& board) {
 	if(gameMovesDone < 10 || gameMovesDone > 50)
 		PLY_DEPTH = 8;
 	else if(gameMovesDone < 13 || gameMovesDone > 45)
-		PLY_DEPTH = 7;
+		PLY_DEPTH = 6;
 	else
 		PLY_DEPTH = 6;
 	if (!strtGame) {
