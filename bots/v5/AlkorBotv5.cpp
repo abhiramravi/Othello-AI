@@ -44,7 +44,7 @@ using namespace Desdemona;
 /*Always keep the depth to be an even number ( preferably) */
 int PLY_DEPTH = 6;
 
-static int gameMovesDone = 2;
+static int gameMovesDone = 3;
 
 /* The best that can be made by our bot*/
 Move FinalMove(-1, -1);
@@ -94,14 +94,14 @@ bool OpponentMoveDone;
 
 int score[10][10] = {
     {0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
-    {0, 30, -3,  21,  8,  8,  21, -3, 30,  0},
-    {0, -3, -17, -4,  1,  1,  -4, -17, -3,  0},
+    {0, 30, -10,  21,  8,  8,  21, -10, 30,  0},
+    {0, -10, -17, -4,  1,  1,  -4, -17, -10,  0},
     {0,  21,  -4,  2,  2,  2,  2,  -4,  21,  0},
     {0,  8,  1,  2,  -3,  -3,  2,  1,  8,  0},
     {0,  8,  1,  2,  -3,  -3,  2,  1,  8,  0},
     {0,  21,  -4,  2,  2,  2,  2,  -4,  21,  0},
-    {0, -3, -17, -4,  1,  1,  -4, -17, -3,  0},
-    {0, 30, -3,  21,  8,  8,  21, -3, 30,  0},
+    {0, -10, -17, -4,  1,  1,  -4, -17, -10,  0},
+    {0, 30, -10,  21,  8,  8,  21, -10, 30,  0},
     {0,  0,  0,  0,  0,  0,  0,  0,  0,  0}
 };
 
@@ -365,11 +365,13 @@ MyBot::MyBot(Turn turn) : OthelloPlayer(turn) {
 
 Move MyBot::play(const OthelloBoard& board) {
 	ourTurn = turn;
+	if(ourTurn == BLACK && strtGame)
+		gameMovesDone--;
 	gameMovesDone += 2;
-	if(gameMovesDone < 10 || gameMovesDone > 50)
+	if(gameMovesDone < 9 || gameMovesDone > 50)
 		PLY_DEPTH = 8;
-	else if(gameMovesDone < 13 || gameMovesDone > 45)
-		PLY_DEPTH = 6;
+	else if(gameMovesDone < 12 || gameMovesDone > 45)
+		PLY_DEPTH = 7;
 	else
 		PLY_DEPTH = 6;
 	if (!strtGame) {
