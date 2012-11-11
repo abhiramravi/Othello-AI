@@ -89,6 +89,9 @@ bool threadSuccessfull;
 /*Position of the Move Made by the opponent*/
 int pos;
 
+/*Move is made by opponent or also not passed by me*/
+bool OpponentMoveDone;
+
 int score[10][10] = {
     {0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
     {0, 30, -3,  21,  8,  8,  21, -3, 30,  0},
@@ -249,8 +252,8 @@ double alphabetaMiniMax(Node* root, int depth, double alpha, double beta, int in
 		return evaluationFunc(root);
 	}
 
-	list<Move> successors = (depth == 0 && threadSuccessfull) ? moveLst1[pos]:
-			( (depth == 1 && thread2Done[ind] && threadSuccessfull )? moveLst2[pos][ind] :
+	list<Move> successors = ( OpponentMoveDone && depth == 0 && threadSuccessfull) ? moveLst1[pos]:
+			( ( OpponentMoveDone && depth == 1 && thread2Done[ind] && threadSuccessfull )? moveLst2[pos][ind] :
 					(root->nodeBoard).getValidMoves(root->nodeType) );
 	/*Mobility Rule for inner nodes*/
 	if (successors.empty()) {
@@ -321,13 +324,22 @@ int getIndex(){
 
 void getPrevMove(const OthelloBoard& board) {
 	int i, j;
+	OpponentMoveDone = true;
+	int numberOfMoves = 0;
 	for (i = 0; i < 8; ++i) {
 		for (j = 0; j < 8; ++j) {
 			if (PrevBoard.get(i, j) == EMPTY && board.get(i, j) != PrevBoard.get(i, j)) {
 				PrevMove.x = i, PrevMove.y = j;
-				return;
+				++numberOfMoves;
+				if(numberOfMoves > 1){
+					OpponentMoveDone = false;
+					return;
+				}
 			}
 		}
+	}
+	if(numberOfMoves == 0){
+		OpponentMoveDone = false;
 	}
 }
 
@@ -363,16 +375,18 @@ Move MyBot::play(const OthelloBoard& board) {
 	if (!strtGame) {
 		pthread_join(RGThread, NULL);
 		getPrevMove(board);
-		pos = getIndex();
-		cout<<"Opponent Move : "<<pos<<" ThreadDone: "<<threadDone<<endl;
-		cout<<"Level 2 : "<<threadDone2<<endl;
-		if(pos > threadDone || pos == -1){
-			/*TODO: make ordinary alpha-beta pruning*/
-			threadSuccessfull = false;
-		}
-		else{
-			threadSuccessfull = true;
-			/*Use the moveLst[pos] for the immediate Successors*/
+		if(OpponentMoveDone){
+			pos = getIndex();
+			cout<<"Opponent Move : "<<pos<<" ThreadDone: "<<threadDone<<endl;
+			cout<<"Level 2 : "<<threadDone2<<endl;
+			if(pos > threadDone || pos == -1){
+				/*TODO: make ordinary alpha-beta pruning*/
+				threadSuccessfull = false;
+			}
+			else{
+				threadSuccessfull = true;
+				/*Use the moveLst[pos] for the immediate Successors*/
+			}
 		}
 	}
 	else if (ourTurn == BLACK) {
