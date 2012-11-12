@@ -17,7 +17,7 @@ $(OUT): $(BOT).o $(ROOTDIR)lib/libOthello.so
 	$(CC) $(LDFLAGS) -shared $^ -o $@
 
 ${OBJS}: %.o : %.cpp 
-	$(CC) $(CFLAGS) -c -m32 $^ -o $@
+	$(CC) $(CFLAGS) -c $^ -o $@
 
 .PHONY: clean submission
 

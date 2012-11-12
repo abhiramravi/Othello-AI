@@ -16,6 +16,7 @@
 #include <list>
 #include <cstring>
 #include <climits>
+#include <map>
 #include <pthread.h>
 using namespace std;
 using namespace Desdemona;
@@ -30,11 +31,12 @@ using namespace Desdemona;
 #define MP make_pair
 
 /*Simulate for different values and choose the best*/
-#define STABILITY_WEIGHT 100
+#define STABILITY_WEIGHT 50
 
-#define PIECE_WEIGHT 1
-#define DISC_WEIGHT 25
-#define MOBILIITY_WEIGHT 1
+#define PIECE_WEIGHT 3
+#define DISC_WEIGHT 50
+#define MOBILIITY_WEIGHT 30
+#define FRONTIER_WEIGHT 3
 
 #define MAX_NUM LONG_MAX
 #define MIN_NUM LONG_MIN
@@ -42,9 +44,11 @@ using namespace Desdemona;
 /*Global Variables*/
 
 /*Always keep the depth to be an even number ( preferably) */
-int PLY_DEPTH = 6;
+int PLY_DEPTH= 6;
 
-static int gameMovesDone = 2;
+static
+
+static int gameMovesDone = 5;
 
 /* The best that can be made by our bot*/
 Move FinalMove(-1, -1);
@@ -89,16 +93,35 @@ bool threadSuccessfull;
 /*Position of the Move Made by the opponent*/
 int pos;
 
+/*Move is made by opponent or also not passed by me*/
+bool OpponentMoveDone;
+
+/*Flag to indicate whether a thread has done the shallow depth*/
+bool shallowDepthDone;
+
+int score1[10][10] = {
+    {0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
+    {0, 50, -20,  30,  8,  8,  30, -20, 50,  0},
+    {0, -20, -25, -4,  1,  1,  -4, -25, -20,  0},
+    {0,  30,  -4,  2,  2,  2,  2,  -4,  30,  0},
+    {0,  8,  1,  2,  -3,  -3,  2,  1,  8,  0},
+    {0,  8,  1,  2,  -3,  -3,  2,  1,  8,  0},
+    {0,  30,  -4,  2,  2,  2,  2,  -4,  30,  0},
+    {0, -20, -25, -4,  1,  1,  -4, -25, -20,  0},
+    {0, 50, -20,  30,  8,  8,  30, -20, 50,  0},
+    {0,  0,  0,  0,  0,  0,  0,  0,  0,  0}
+};
+
 int score[10][10] = {
     {0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
-    {0, 30, -3,  21,  8,  8,  21, -3, 30,  0},
-    {0, -3, -17, -4,  1,  1,  -4, -17, -3,  0},
-    {0,  21,  -4,  2,  2,  2,  2,  -4,  21,  0},
+    {0, 20, -3,  11,  8,  8,  11, -3, 20,  0},
+    {0, -3, -7, -4,  1,  1,  -4, -7, -3,  0},
+    {0,  11,  -4,  2,  2,  2,  2,  -4,  11,  0},
     {0,  8,  1,  2,  -3,  -3,  2,  1,  8,  0},
     {0,  8,  1,  2,  -3,  -3,  2,  1,  8,  0},
-    {0,  21,  -4,  2,  2,  2,  2,  -4,  21,  0},
-    {0, -3, -17, -4,  1,  1,  -4, -17, -3,  0},
-    {0, 30, -3,  21,  8,  8,  21, -3, 30,  0},
+    {0,  11,  -4,  2,  2,  2,  2,  -4,  11,  0},
+    {0, -3, -7, -4,  1,  1,  -4, -7, -3,  0},
+    {0, 20, -3,  11,  8,  8,  11, -3, 20,  0},
     {0,  0,  0,  0,  0,  0,  0,  0,  0,  0}
 };
 
@@ -111,17 +134,12 @@ public:
 	Turn nodeType;
 
 	Node(OthelloBoard board, Turn type);
-	void ModifyBoard(Move moveMade);
 	~Node();
 };
 
 Node::Node(OthelloBoard board, Turn type) {
 	this->nodeBoard = board;
 	this->nodeType = type;
-}
-
-void Node::ModifyBoard(Move moveMade) {
-	(this->nodeBoard).makeMove(other(this->nodeType), moveMade);
 }
 
 bool isDiagonalsFilled(int i, int j, OthelloBoard& curBoard )
@@ -191,16 +209,20 @@ int stabilityFactor(Node* curNode)
 				stability--;
 		}
 	}
-	if( filledRows[0] && myTurn == curBoard.get(0, 0) && curBoard.get(0, 0) == myTurn) stability += 8;
-	if( filledRows[7] && myTurn == curBoard.get(7, 0) && curBoard.get(0, 0) == myTurn) stability += 8;
-	if( filledCols[0] && myTurn == curBoard.get(0, 7) && curBoard.get(0, 0) == myTurn) stability += 8;
-	if( filledCols[7] && myTurn == curBoard.get(7, 7) && curBoard.get(0, 0) == myTurn) stability += 8;
-	if( filledRows[0] && myTurn == curBoard.get(0, 0) && curBoard.get(0, 0) == otherTurn) stability -= 8;
-	if( filledRows[7] && myTurn == curBoard.get(7, 0) && curBoard.get(0, 0) == otherTurn) stability -= 8;
-	if( filledCols[0] && myTurn == curBoard.get(0, 7) && curBoard.get(0, 0) == otherTurn) stability -= 8;
-	if( filledCols[7] && myTurn == curBoard.get(7, 7) && curBoard.get(0, 0) == otherTurn) stability -= 8;
+	if( filledRows[0] && myTurn == curBoard.get(0, 0)) stability += 8;
+	if( filledRows[7] && myTurn == curBoard.get(7, 0)) stability += 8;
+	if( filledCols[0] && myTurn == curBoard.get(0, 7)) stability += 8;
+	if( filledCols[7] && myTurn == curBoard.get(7, 7)) stability += 8;
+	if( filledRows[0] && otherTurn == curBoard.get(0, 0)) stability -= 8;
+	if( filledRows[7] && otherTurn == curBoard.get(7, 0)) stability -= 8;
+	if( filledCols[0] && otherTurn == curBoard.get(0, 7)) stability -= 8;
+	if( filledCols[7] && otherTurn == curBoard.get(7, 7)) stability -= 8;
 
 	return stability;
+}
+
+inline bool checkBound(int x, int y){
+	return (x >= 0 && y < 8 && y >= 0 && x < 8);
 }
 
 double evaluationFunc(Node* curNode) {
@@ -212,31 +234,75 @@ double evaluationFunc(Node* curNode) {
 
 	/*Coin position weight*/
 	int discEvalVal = 0;
+	int frontierVal = 0;
 	int i, j, a, b;
+
+	a = (curNode->nodeBoard).getRedCount();
+	b = (curNode->nodeBoard).getBlackCount();
+	if(gameMovesDone > 54)
+		return (( myTurn == RED ? (a-b) : (b-a))*PIECE_WEIGHT);
 
 	for (i = 0; i < 8; ++i) {
 		for (j = 0; j < 8; ++j){
-			if ((curNode->nodeBoard).get(i, j) == myTurn)
+			if ((curNode->nodeBoard).get(i, j) == myTurn){
 				discEvalVal += score[i + 1][j + 1];
-			else if ((curNode->nodeBoard).get(i, j) == otherTurn)
+				if(checkBound(i-1, j) && (curNode->nodeBoard).get(i-1,j) == EMPTY)
+					frontierVal++;
+				else if(checkBound(i, j-1) && (curNode->nodeBoard).get(i,j-1) == EMPTY)
+					frontierVal++;
+				else if(checkBound(i+1, j) && (curNode->nodeBoard).get(i+1,j) == EMPTY)
+					frontierVal++;
+				else if(checkBound(i, j+1) && (curNode->nodeBoard).get(i,j+1) == EMPTY)
+					frontierVal++;
+			}
+			else if ((curNode->nodeBoard).get(i, j) == otherTurn){
 				discEvalVal -= score[i + 1][j + 1];
+				if(checkBound(i-1, j) && (curNode->nodeBoard).get(i-1,j) == EMPTY)
+					frontierVal--;
+				else if(checkBound(i, j-1) && (curNode->nodeBoard).get(i,j-1) == EMPTY)
+					frontierVal--;
+				else if(checkBound(i+1, j) && (curNode->nodeBoard).get(i+1,j) == EMPTY)
+					frontierVal--;
+				else if(checkBound(i, j+1) && (curNode->nodeBoard).get(i,j+1) == EMPTY)
+					frontierVal--;
+			}
 		}
 	}
 
 	finalVal += DISC_WEIGHT*discEvalVal;
+	finalVal += FRONTIER_WEIGHT*frontierVal;
 
-	/*Add weights to the mobility count
+	/*Add weights to the mobility count*/
 	a = (curNode->nodeBoard).getValidMoves(myTurn).size();
 	b = (curNode->nodeBoard).getValidMoves(otherTurn).size();
-	finalVal += MOBILIITY_WEIGHT*(a-b);*/
+	finalVal += MOBILIITY_WEIGHT*(a-b);
 
 	/*Add weights to the Piecewise count of Coins*/
-	a = (curNode->nodeBoard).getRedCount();
-	b = (curNode->nodeBoard).getBlackCount();
 	finalVal += PIECE_WEIGHT*( myTurn == RED ? (a-b) : (b-a) );
 
 	/*Add weights to frontier cells*/
 	return finalVal + (stabilityFactor(curNode) * STABILITY_WEIGHT);
+}
+
+double evaluationFunc1(Node* root, Turn myTurn){
+
+	Turn otherTurn = other(myTurn);
+
+	int a = (root->nodeBoard).getRedCount();
+	int b = (root->nodeBoard).getBlackCount();
+	if(gameMovesDone > 54)
+		return (( myTurn == RED ? (a-b) : (b-a))*PIECE_WEIGHT);
+	double finalVal = 0.0;
+	int i, j;
+	for(i = 0; i < 8; ++i){
+		for( j = 0; j < 8; ++j){
+			if((root->nodeBoard).get(i,j) == myTurn)
+				finalVal += score[i+1][j+1];
+			else if((root->nodeBoard).get(i,j) == otherTurn)
+				finalVal -= score[i+1][j+1];
+		}
+	}
+	return finalVal;
 }
 
 /**
@@ -244,42 +310,97 @@ double evaluationFunc(Node* curNode) {
  * Pruning is done while constructing with the help of Evaluation function
  * List of all the children of a current Node can be obtained from the .getValidMoves method of OthelloBoard object
  */
-double alphabetaMiniMax(Node* root, int depth, double alpha, double beta, int ind) {
-	if (depth == PLY_DEPTH) {
-		return evaluationFunc(root);
-	}
 
-	list<Move> successors = (depth == 0 && threadSuccessfull) ? moveLst1[pos]:
-			( (depth == 1 && thread2Done[ind] && threadSuccessfull )? moveLst2[pos][ind] :
-					(root->nodeBoard).getValidMoves(root->nodeType) );
-	/*Mobility Rule for inner nodes*/
-	if (successors.empty()) {
+double alphabetaMiniMax(Node* root, int depth, double alpha, double beta, int ind) {
+	if (depth == PLY_DEPTH)
 		return evaluationFunc(root);
-	}
+
+	list<Move> successors = (depth == 0 ? moveLst1[pos] : (depth == 1  ? moveLst2[pos][ind] :  (root->nodeBoard).getValidMoves(root->nodeType)));
+	/*Mobility Rule for inner nodes*/
+	if (successors.empty())
+		return evaluationFunc(root);
 
 	Node* tmp = NULL;
 	double newValue = 0.0;
 	int i = 0;
+	Turn otherTurn = other(root->nodeType);
+
 	for (list<Move>::iterator it = successors.begin(); it != successors.end(); ++it, ++i) {
-		tmp = new Node(root->nodeBoard, other(root->nodeType));
-		tmp->ModifyBoard(*it);
+		tmp = new Node(root->nodeBoard, otherTurn);
+		(tmp->nodeBoard).makeMove(root->nodeType, *it);
 		newValue = -1 * alphabetaMiniMax(tmp, depth + 1, -1 * beta, -1 * alpha, i);
 		if (newValue > alpha) {
 			alpha = newValue;
-			if (depth == 0) {
-				FinalMove.x = it->x;
-				FinalMove.y = it->y;
-			}
+			if (depth == 0)
+				FinalMove.x = it->x, FinalMove.y = it->y;
 		}
-		if (alpha >= beta) {
+		if (alpha >= beta)
 			return alpha;
-		}
 	}
 	return alpha;
 }
 
+typedef pair<double, Move> pim;
+
+bool compareTo(const pim& a, const pim& b){
+	return a.first > b.first;
+}
+
+bool compareTo1(const pim& a, const pim& b){
+	return b.first > a.first;
+}
+
+/*Shallow Depth MiniMax;  2 depth lookup; Ordering using sort function*/
+void shallowDepth(Node* root){
+
+	if(!threadSuccessfull)
+		moveLst1[pos] = (root->nodeBoard).getValidMoves(ourTurn);
+
+	list<pim> compareLst;
+	list<pim> compareLst1[32];
+	int size = 0;
+	OthelloBoard saveBoard = root->nodeBoard;
+	Turn otherTurn = other(ourTurn);
+
+	for(list<Move>::iterator it = moveLst1[pos].begin(); it != moveLst1[pos].end(); ++it){
+		(root->nodeBoard).makeMove(ourTurn, *it);
+		compareLst.push_back(MP(evaluationFunc1(root, otherTurn), *it));
+		root->nodeBoard = saveBoard;
+	}
+	compareLst.sort(compareTo);
+
+	for(list<pim>::iterator it = compareLst.begin(); it != compareLst.end(); ++it, ++size){
+		(root->nodeBoard).makeMove(ourTurn, it->second);
+		//if(!(thread2Done[size] && threadSuccessfull))
+			moveLst2[pos][size] = (root->nodeBoard).getValidMoves(otherTurn);
+		OthelloBoard saveBoard1 = root->nodeBoard;
+		for( list<Move>::iterator kj = moveLst2[pos][size].begin(); kj != moveLst2[pos][size].end(); ++kj){
+			(root->nodeBoard).makeMove(otherTurn, *kj);
+			compareLst1[size].push_back(MP(evaluationFunc1(root, ourTurn), *kj));
+			root->nodeBoard = saveBoard1;
+		}
+		root->nodeBoard = saveBoard;
+	}
+
+	for(int i = 0; i < size; ++i)
+		compareLst1[i].sort(compareTo1);
+
+	moveLst1[pos].clear();
+	for(list<pim>::iterator it = compareLst.begin(); it != compareLst.end(); ++it)
+		moveLst1[pos].push_back(it->second);
+
+	for(int i = 0; i < size; ++i){
+		moveLst2[pos][i].clear();
+		for(list<pim>::iterator it = compareLst1[i].begin(); it != compareLst1[i].end(); ++it)
+			moveLst2[pos][i].push_back(it->second);
+	}
+
+}
+
+/*Function to calculate 2 levels of Moves*/
 void* threadFunc(void* ptr){
 	int i, j;
+	shallowDepthDone = false;
 	threadDone = threadDone2 = -1;
 	memset(thread2Done,false, sizeof(thread2Done));
 	Turn otherTurn = other(ourTurn);
@@ -321,14 +442,34 @@ int getIndex(){
 
 void getPrevMove(const OthelloBoard& board) {
 	int i, j;
+	OpponentMoveDone = true;
+	int numberOfMoves = 0;
 	for (i = 0; i < 8; ++i) {
 		for (j = 0; j < 8; ++j) {
 			if (PrevBoard.get(i, j) == EMPTY && board.get(i, j) != PrevBoard.get(i, j)) {
 				PrevMove.x = i, PrevMove.y = j;
-				return;
+				++numberOfMoves;
+				if(numberOfMoves > 1)
+					OpponentMoveDone = false;
 			}
 		}
 	}
+	gameMovesDone += numberOfMoves;
+	if(numberOfMoves == 0)
+		OpponentMoveDone = false;
+}
+
+void setPlyDepth(){
+	if(gameMovesDone < 6 || gameMovesDone > 50)
+			PLY_DEPTH = 10;
+	else if(gameMovesDone < 7)
+		PLY_DEPTH = 8;
+	else if(gameMovesDone < 9 || gameMovesDone > 45)
+		PLY_DEPTH = 7;
+	else if(gameMovesDone < 25 || gameMovesDone > 35)
+		PLY_DEPTH = 6;
+	else
+		PLY_DEPTH = 5;
 }
 
 class MyBot: public OthelloPlayer {
@@ -353,32 +494,24 @@ MyBot::MyBot(Turn turn) : OthelloPlayer(turn) {
 
 Move MyBot::play(const OthelloBoard& board) {
 	ourTurn = turn;
-	gameMovesDone += 2;
-	if(gameMovesDone < 10 || gameMovesDone > 50)
-		PLY_DEPTH = 8;
-	else if(gameMovesDone < 13 || gameMovesDone > 45)
-		PLY_DEPTH = 7;
-	else
-		PLY_DEPTH = 6;
+	threadSuccessfull = false;
 	if (!strtGame) {
 		pthread_join(RGThread, NULL);
 		getPrevMove(board);
-		pos = getIndex();
-		cout<<"Opponent Move : "<<pos<<" ThreadDone: "<<threadDone<<endl;
-		cout<<"Level 2 : "<<threadDone2<<endl;
-		if(pos > threadDone || pos == -1){
-			/*TODO: make ordinary alpha-beta pruning*/
-			threadSuccessfull = false;
-		}
-		else{
-			threadSuccessfull = true;
-			/*Use the moveLst[pos] for the immediate Successors*/
+		setPlyDepth();
+		if(OpponentMoveDone){
+			pos = getIndex();
+			cout<<"Opponent Move : "<<pos<<" ThreadDone: "<<threadDone<<endl;
+			cout<<"Level 2 : "<<threadDone2<<endl;
+			if(pos <= threadDone && pos != -1)
+				threadSuccessfull = true;
 		}
 	}
 	else if (ourTurn == BLACK) {
 		strtGame = false;
+		--gameMovesDone;
+		setPlyDepth();
 		PrevBoard = OthelloBoard(board);
-
 		list<Move> moveLst = PrevBoard.getValidMoves(ourTurn);
 		list<Move>::iterator it = moveLst.begin();
 		int randNo = (rand() % 4);
@@ -386,18 +519,20 @@ Move MyBot::play(const OthelloBoard& board) {
 
 		FinalMove.x = it->x, FinalMove.y = it->y;
 		PrevBoard.makeMove(ourTurn, FinalMove);
-
+		++gameMovesDone;
 		/* Initializing the thread to RG opponenet before returning the move */
 		RGThreadStatus = pthread_create(&RGThread, NULL, threadFunc, (void*)NULL);
 
 		return FinalMove;
 	}
 	strtGame = false;
-
 	PrevBoard = OthelloBoard(board);
 	Node* root = new Node(PrevBoard, ourTurn);
+	if(!shallowDepthDone)
+		shallowDepth(root);
 	alphabetaMiniMax(root, 0, MIN_NUM, MAX_NUM, 0);
 	PrevBoard.makeMove(ourTurn, FinalMove);
+	++gameMovesDone;
 	/* Initializing the thread to RG opponenet before returning the move */
 	RGThreadStatus = pthread_create(&RGThread, NULL, threadFunc, (void*)NULL);
 
