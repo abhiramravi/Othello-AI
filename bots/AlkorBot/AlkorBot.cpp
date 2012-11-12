@@ -31,12 +31,12 @@ using namespace Desdemona;
 #define MP make_pair
 
 /*Simulate for different values and choose the best*/
-#define STABILITY_WEIGHT 70
+#define STABILITY_WEIGHT 150
 
 #define PIECE_WEIGHT 3
-#define DISC_WEIGHT 20
+#define DISC_WEIGHT 70
 #define MOBILIITY_WEIGHT 40
-#define FRONTIER_WEIGHT 10
+#define FRONTIER_WEIGHT 20
 
 #define MAX_NUM LONG_MAX
 #define MIN_NUM LONG_MIN
@@ -101,7 +101,7 @@ bool OpponentMoveDone;
 /*Flag to indicate whether a thread has done the shallow depth*/
 bool shallowDepthDone;
 
-int score1[10][10] = {
+int score2[10][10] = {
     {0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
     {0, 30, -10,  21,  8,  8,  21, -10, 30,  0},
     {0, -10, -17, -4,  1,  1,  -4, -17, -10,  0},
@@ -126,7 +126,18 @@ int score[10][10] = {
     {0, 20, -3,  11,  8,  8,  11, -3, 20,  0},
     {0,  0,  0,  0,  0,  0,  0,  0,  0,  0}
 };
-
+int score1[10][10] = {
+            {0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
+            {0, 65, -10,  6,  4,  4,  6, -10, 65,  0},
+            {0, -10, -29, 3,  1,  1,  3, -29,-10,  0},
+            {0,  6,  3,  5,  3,  3,  5,  3,  6,  0},
+            {0,  4,  1,  3,  1,  1,  3,  1,  4,  0},
+            {0,  4,  1,  3,  1,  1,  3,  1,  4,  0},
+            {0,  6,  3,  5,  3,  3,  5,  3,  6,  0},
+            {0, -10, -29, 3,  1,  1,  3, -29,-10,  0},
+            {0, 65, -10,  6,  4,  4,  6, -10, 65,  0},
+            {0,  0,  0,  0,  0,  0,  0,  0,  0,  0}
+    };
 /**
  *  Each Node of the MinMax Tree is represented by the 'Node' Class
  */
@@ -466,14 +477,15 @@ void getPrevMove(const OthelloBoard& board) {
 }
 
 void setPlyDepth(){
-	if(gameMovesDone < 6 || gameMovesDone > 54)
-		PLY_DEPTH = 10;
-	else if(gameMovesDone < 7 || gameMovesDone > 50)
-		PLY_DEPTH = 8;
-	else if(gameMovesDone < 9 || gameMovesDone > 45)
+if(gameMovesDone < 6 || gameMovesDone > 55)
+			PLY_DEPTH = 10;
+			else if (gameMovesDone > 50) PLY_DEPTH = 8;
+	else if(gameMovesDone < 7)
 		PLY_DEPTH = 7;
-	else if(gameMovesDone < 22 || gameMovesDone > 38)
+	else if(gameMovesDone < 9 || gameMovesDone > 35)
 		PLY_DEPTH = 6;
+	else if(gameMovesDone < 15 )
+		PLY_DEPTH = 5;
 	else
 		PLY_DEPTH = 5;
 }
@@ -508,8 +520,6 @@ Move MyBot::play(const OthelloBoard& board) {
 		setPlyDepth();
 		if(OpponentMoveDone){
 			pos = getIndex();
-			cout<<"Opponent Move : "<<pos<<" ThreadDone: "<<threadDone<<endl;
-			cout<<"Level 2 : "<<threadDone2<<endl;
 			if(pos <= threadDone && pos != -1)
 				threadSuccessfull = true;
 		}
